@@ -16,6 +16,57 @@ typedef struct STR_OPS{
 	gpointer incorrectLabel;
 }STR_OPS;
 
+
+void end_program(GtkWidget *wid, gpointer ptr);
+void correctIncrease(GtkWidget *wid, gpointer ptr);
+void incorrectIncrease(GtkWidget *wid, gpointer ptr);
+void read_words (STR_OPS *user_data);
+static gboolean key_event(GtkWidget *wid, GdkEventKey *event, gpointer user_data);
+
+
+int main(int argc, char *argv[]){
+	FILE *fp;
+	fp = fopen("./exampleText.txt", "rb");
+
+	struct STR_OPS data;
+	data.curStrIndex = 0;
+	data.filePath = fp;
+	// strcpy(data.str, "Test Text");
+	
+	gtk_init(&argc, &argv);
+	
+	GtkWidget *win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	GtkWidget *tbl = gtk_table_new(3, 3, TRUE);
+	GtkWidget *text = gtk_label_new(data.str);
+	GtkWidget *typed = gtk_label_new(" ");
+	GtkWidget *correct = gtk_label_new("Correct: 0");
+	GtkWidget *wrong = gtk_label_new("Incorrect: 0");
+	
+	data.text = text;
+	data.label = typed;
+	data.correctLabel = correct;
+	data.incorrectLabel = wrong;
+
+	read_words(&data);
+	data.strLen = strlen(data.str);
+	
+	g_signal_connect(win, "delete_event", G_CALLBACK(end_program), NULL);
+	g_signal_connect(win, "key-press-event", G_CALLBACK(key_event), &data);
+	
+	gtk_table_attach_defaults(GTK_TABLE (tbl), text, 0, 2, 0, 1); // Row 0 Space 0-1
+	gtk_table_attach_defaults(GTK_TABLE (tbl), typed, 0, 2, 2, 3); // Row 2 Space 0-1
+	gtk_table_attach_defaults(GTK_TABLE (tbl), correct, 2, 3, 0, 1); // Row 0 Space 2
+	gtk_table_attach_defaults(GTK_TABLE (tbl), wrong, 2, 3, 1, 2); // Row 1 Space 2
+
+	
+	gtk_container_add(GTK_CONTAINER (win), tbl);
+	
+	gtk_widget_show_all(win);
+	gtk_main();
+	return 0;
+}
+
+
 void end_program(GtkWidget *wid, gpointer ptr){
 	gtk_main_quit();
 }
@@ -77,46 +128,4 @@ static gboolean key_event(GtkWidget *wid,
 		}
 	}
 	return FALSE;
-}
-
-int main(int argc, char *argv[]){
-	FILE *fp;
-	fp = fopen("./exampleText.txt", "rb");
-
-	struct STR_OPS data;
-	data.curStrIndex = 0;
-	data.filePath = fp;
-	// strcpy(data.str, "Test Text");
-	
-	gtk_init(&argc, &argv);
-	
-	GtkWidget *win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	GtkWidget *tbl = gtk_table_new(3, 3, TRUE);
-	GtkWidget *text = gtk_label_new(data.str);
-	GtkWidget *typed = gtk_label_new(" ");
-	GtkWidget *correct = gtk_label_new("Correct: 0");
-	GtkWidget *wrong = gtk_label_new("Incorrect: 0");
-	
-	data.text = text;
-	data.label = typed;
-	data.correctLabel = correct;
-	data.incorrectLabel = wrong;
-
-	read_words(&data);
-	data.strLen = strlen(data.str);
-	
-	g_signal_connect(win, "delete_event", G_CALLBACK(end_program), NULL);
-	g_signal_connect(win, "key-press-event", G_CALLBACK(key_event), &data);
-	
-	gtk_table_attach_defaults(GTK_TABLE (tbl), text, 0, 2, 0, 1); // Row 0 Space 0-1
-	gtk_table_attach_defaults(GTK_TABLE (tbl), typed, 0, 2, 2, 3); // Row 2 Space 0-1
-	gtk_table_attach_defaults(GTK_TABLE (tbl), correct, 2, 3, 0, 1); // Row 0 Space 2
-	gtk_table_attach_defaults(GTK_TABLE (tbl), wrong, 2, 3, 1, 2); // Row 1 Space 2
-
-	
-	gtk_container_add(GTK_CONTAINER (win), tbl);
-	
-	gtk_widget_show_all(win);
-	gtk_main();
-	return 0;
 }
