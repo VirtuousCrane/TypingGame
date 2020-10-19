@@ -1,5 +1,6 @@
 # include <stdio.h>
 # include <string.h>
+# include <ctype.h>
 # include <gtk-2.0/gtk/gtk.h>
 
 int correct = 0;
@@ -8,7 +9,8 @@ int incorrect = 0;
 typedef struct STR_OPS{
 	int strLen;
 	int curStrIndex;
-	char str[256];
+	char str[128];
+	char typedStr[128];
 	FILE *filePath;
 	gpointer label;
 	gpointer text;
@@ -21,7 +23,7 @@ void end_program(GtkWidget *wid, gpointer ptr);
 void correctIncrease(GtkWidget *wid, gpointer ptr);
 void incorrectIncrease(GtkWidget *wid, gpointer ptr);
 void read_words (STR_OPS *user_data);
-static gboolean key_event(GtkWidget *wid, GdkEventKey *event, gpointer user_data);
+static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_data);
 
 
 int main(int argc, char *argv[]){
@@ -31,7 +33,6 @@ int main(int argc, char *argv[]){
 	struct STR_OPS data;
 	data.curStrIndex = 0;
 	data.filePath = fp;
-	// strcpy(data.str, "Test Text");
 	
 	gtk_init(&argc, &argv);
 	
@@ -51,7 +52,7 @@ int main(int argc, char *argv[]){
 	data.strLen = strlen(data.str);
 	
 	g_signal_connect(win, "delete_event", G_CALLBACK(end_program), NULL);
-	g_signal_connect(win, "key-press-event", G_CALLBACK(key_event), &data);
+	g_signal_connect(win, "key-press-event", G_CALLBACK(keyCallback), &data);
 	
 	gtk_table_attach_defaults(GTK_TABLE (tbl), text, 0, 2, 0, 1); // Row 0 Space 0-1
 	gtk_table_attach_defaults(GTK_TABLE (tbl), typed, 0, 2, 2, 3); // Row 2 Space 0-1
@@ -86,24 +87,71 @@ void incorrectIncrease(GtkWidget *wid, gpointer ptr){
 }
 
 void read_words (STR_OPS *user_data) {
-    char buffer[256];
-    int bufferLen;
-    if (fscanf(user_data->filePath, "%256[^\n]\n", buffer) == 1) {	// TODO: 256 char limit doesn't work.
-        puts(buffer);
-        bufferLen = strlen(buffer);
+	static char leftover[1024];
+    char buffer[1024];
+    int i = 127;
+    int leftoverIndex = 0;
+    int bufferLen, leftoverLen = strlen(leftover);
+    g_printerr("%d", leftoverLen);
+
+    if (leftoverLen > 0){
+    	strcpy(buffer, leftover);
+    	bufferLen = strlen(buffer);
+    	leftover[0] = '\0';
+
+    	if(bufferLen > 127){
+    		int i = 127;
+    		for(i, leftoverIndex; i <= bufferLen; i++, leftoverIndex++){
+    			if(i == bufferLen)
+    				leftover[leftoverIndex] = '\0';
+    			else
+    				leftover[leftoverIndex] = buffer[i];
+    		}
+    		buffer[127] = '\0';
+    	}else{
+    		user_data->strLen = strlen(buffer);
+    	}
+
         strcpy(user_data->str, buffer);
-        user_data->str[bufferLen]='\0';
-        user_data->strLen = bufferLen;
+        user_data->str[strlen(buffer)] = '\0';
+        gtk_label_set_text(GTK_LABEL (user_data->text), buffer);
+
+    }else if (fscanf(user_data->filePath, "%[^\n]\n", buffer) == 1) {
+        bufferLen = strlen(buffer);
+        g_printerr("%d", bufferLen);
+
+    	if(isspace(buffer[bufferLen-1])){
+    		buffer[bufferLen-1] = '\0';
+    		user_data->strLen = bufferLen;
+    	}
+
+    	if(bufferLen > 127){
+    		g_printerr("Overflown\n");
+    		for(i, leftoverIndex; i <= bufferLen; i++, leftoverIndex++){
+    			g_printerr("%d", i);
+    			if(i == bufferLen)
+    				leftover[leftoverIndex] = '\0';
+    			else
+    				leftover[leftoverIndex] = buffer[i];
+    		}
+    		g_printerr("%s\n", leftover);
+    		buffer[127] = '\0';
+    		user_data->strLen = bufferLen - (leftoverIndex-1);
+    	}else{
+    		user_data->strLen = strlen(buffer);
+    	}
+
+        strcpy(user_data->str, buffer);
+        user_data->str[user_data->strLen]='\0';
         gtk_label_set_text(GTK_LABEL (user_data->text), buffer);
     }else{
-    	g_printerr("Cannot read\n");
+    	g_printerr("EOF\n");
+    	fclose(user_data->filePath);
     	exit(0);
     }
 }
 
-static gboolean key_event(GtkWidget *wid, 
-							GdkEventKey *event, 
-							gpointer user_data){
+static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_data){
 	struct STR_OPS *d = user_data;
 	char key = event->keyval;
 	char temp[2];
@@ -111,16 +159,21 @@ static gboolean key_event(GtkWidget *wid,
 	sprintf(temp, "%c", key);
 	if(key > 31 && key < 127){
 		g_printerr("%c %d\n", key, key);
-		gtk_label_set_text(GTK_LABEL (d->label), temp);
+		// gtk_label_set_text(GTK_LABEL (d->label), temp);
 		
 		if(d->str[d->curStrIndex] == key){
 			g_printerr("Correct\n");
 			correctIncrease(wid, d->correctLabel);
-			if(d->curStrIndex < d->strLen-1){
-				d->curStrIndex = d->curStrIndex+1;
-			}
+			d->typedStr[d->curStrIndex] = key;
+			d->typedStr[d->curStrIndex + 1] = '\0';
+			gtk_label_set_text(GTK_LABEL (d->label), d->typedStr);
+
+			if(d->curStrIndex < d->strLen - 1)
+				d->curStrIndex = d->curStrIndex + 1;
 			else{
 				d->curStrIndex = 0;
+				d->typedStr[d->curStrIndex] = '\0';
+				gtk_label_set_text(GTK_LABEL (d->label), d->typedStr);
 				read_words(user_data);
 			}
 		}else{
