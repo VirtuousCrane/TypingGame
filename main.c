@@ -90,56 +90,19 @@ void incorrectIncrease(GtkWidget *wid, gpointer ptr){
 }
 
 void read_words (STR_OPS *user_data) {
-	static char leftover[1024];
-    char buffer[1024];
+    char buffer[128];
     int i = 127;
-    int leftoverIndex = 0;
-    int bufferLen, leftoverLen = strlen(leftover);
-    g_printerr("%d", leftoverLen);
+    int bufferLen;
 
-    if (leftoverLen > 0){
-    	strcpy(buffer, leftover);
-    	bufferLen = strlen(buffer);
-    	leftover[0] = '\0';
-
-    	if(bufferLen > 127){
-    		int i = 127;
-    		for(i, leftoverIndex; i <= bufferLen; i++, leftoverIndex++){
-    			if(i == bufferLen)
-    				leftover[leftoverIndex] = '\0';
-    			else
-    				leftover[leftoverIndex] = buffer[i];
-    		}
-    		buffer[127] = '\0';
-    	}else{
-    		user_data->strLen = strlen(buffer);
-    	}
-
-        strcpy(user_data->str, buffer);
-        user_data->str[strlen(buffer)] = '\0';
-        gtk_label_set_text(GTK_LABEL (user_data->text), buffer);
-
-    }else if (fscanf(user_data->filePath, "%[^\n]\n", buffer) == 1) {
+    if (fgets(buffer, 127, user_data->filePath) != NULL) {
         bufferLen = strlen(buffer);
         g_printerr("%d", bufferLen);
-
+		
+		g_printerr("Last Char: %c", buffer[bufferLen-1]);
     	if(isspace(buffer[bufferLen-1])){
+    		g_printerr("IsSpace");
     		buffer[bufferLen-1] = '\0';
-    		user_data->strLen = bufferLen;
-    	}
-
-    	if(bufferLen > 127){
-    		g_printerr("Overflown\n");
-    		for(i, leftoverIndex; i <= bufferLen; i++, leftoverIndex++){
-    			g_printerr("%d", i);
-    			if(i == bufferLen)
-    				leftover[leftoverIndex] = '\0';
-    			else
-    				leftover[leftoverIndex] = buffer[i];
-    		}
-    		g_printerr("%s\n", leftover);
-    		buffer[127] = '\0';
-    		user_data->strLen = bufferLen - (leftoverIndex-1);
+    		user_data->strLen = strlen(buffer)-1;
     	}else{
     		user_data->strLen = strlen(buffer);
     	}
@@ -162,7 +125,6 @@ static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_da
 	sprintf(temp, "%c", key);
 	if(key > 31 && key < 127){
 		g_printerr("%c %d\n", key, key);
-		// gtk_label_set_text(GTK_LABEL (d->label), temp);
 		
 		if(d->str[d->curStrIndex] == key){
 			g_printerr("Correct\n");
