@@ -37,7 +37,7 @@ int main(int argc, char *argv[]){
 	gtk_init(&argc, &argv);
 	
 	GtkWidget *win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	GtkWidget *tbl = gtk_table_new(3, 3, TRUE);
+	GtkWidget *tbl = gtk_table_new(3, 5, TRUE);
 	GtkWidget *text = gtk_label_new(data.str);
 	GtkWidget *typed = gtk_label_new(" ");
 	GtkWidget *correct = gtk_label_new("Correct: 0");
@@ -51,13 +51,16 @@ int main(int argc, char *argv[]){
 	read_words(&data);
 	data.strLen = strlen(data.str);
 	
+	gtk_container_set_border_width(GTK_CONTAINER (tbl), 10);
+	gtk_table_set_col_spacing(GTK_TABLE (tbl), 2, 5);
+	
 	g_signal_connect(win, "delete_event", G_CALLBACK(end_program), NULL);
 	g_signal_connect(win, "key-press-event", G_CALLBACK(keyCallback), &data);
 	
-	gtk_table_attach_defaults(GTK_TABLE (tbl), text, 0, 2, 0, 1); // Row 0 Space 0-1
-	gtk_table_attach_defaults(GTK_TABLE (tbl), typed, 0, 2, 2, 3); // Row 2 Space 0-1
-	gtk_table_attach_defaults(GTK_TABLE (tbl), correct, 2, 3, 0, 1); // Row 0 Space 2
-	gtk_table_attach_defaults(GTK_TABLE (tbl), wrong, 2, 3, 1, 2); // Row 1 Space 2
+	gtk_table_attach_defaults(GTK_TABLE (tbl), text, 0, 4, 0, 1); // Row 0 Space 0-1
+	gtk_table_attach_defaults(GTK_TABLE (tbl), typed, 0, 4, 2, 3); // Row 2 Space 0-1
+	gtk_table_attach_defaults(GTK_TABLE (tbl), correct, 4, 5, 0, 1); // Row 0 Space 2
+	gtk_table_attach_defaults(GTK_TABLE (tbl), wrong, 4, 5, 1, 2); // Row 1 Space 2
 
 	
 	gtk_container_add(GTK_CONTAINER (win), tbl);
