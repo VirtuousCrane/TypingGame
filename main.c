@@ -1,16 +1,19 @@
 # include <stdio.h>
 # include <string.h>
 # include <ctype.h>
+# include <time.h>
 # include <gtk-2.0/gtk/gtk.h>
 
 int correct = 0;
 int incorrect = 0;
+int word = 0;
 
 typedef struct STR_OPS{
 	int strLen;
 	int curStrIndex;
 	char str[128];
 	char typedStr[128];
+	time_t startTime;
 	FILE *filePath;
 	gpointer label;
 	gpointer text;
@@ -23,6 +26,7 @@ void end_program(GtkWidget *wid, gpointer ptr);
 void correctIncrease(GtkWidget *wid, gpointer ptr);
 void incorrectIncrease(GtkWidget *wid, gpointer ptr);
 void read_words (STR_OPS *user_data);
+void calWPM(long int timeElapsed);
 static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_data);
 
 
@@ -33,6 +37,7 @@ int main(int argc, char *argv[]){
 	struct STR_OPS data;
 	data.curStrIndex = 0;
 	data.filePath = fp;
+	data.startTime = time(0);
 	
 	gtk_init(&argc, &argv);
 	
@@ -93,16 +98,17 @@ void read_words (STR_OPS *user_data) {
     char buffer[128];
     int i = 127;
     int bufferLen;
+    g_printerr("===\n%d words\n===\n", word);
 
     if (fgets(buffer, 127, user_data->filePath) != NULL) {
         bufferLen = strlen(buffer);
-        g_printerr("%d", bufferLen);
+        g_printerr("Buffer Len: %d\n", bufferLen);
 		
-		g_printerr("Last Char: %c", buffer[bufferLen-1]);
+		g_printerr("Last Char: %c\n", buffer[bufferLen-1]);
     	if(isspace(buffer[bufferLen-1])){
-    		g_printerr("IsSpace");
+    		g_printerr("IsSpace\n");
     		buffer[bufferLen-1] = '\0';
-    		user_data->strLen = strlen(buffer)-1;
+    		user_data->strLen = strlen(buffer);
     	}else{
     		user_data->strLen = strlen(buffer);
     	}
@@ -111,10 +117,25 @@ void read_words (STR_OPS *user_data) {
         user_data->str[user_data->strLen]='\0';
         gtk_label_set_text(GTK_LABEL (user_data->text), buffer);
     }else{
+    	time_t endTime = time(0);
+    	g_printerr("Elapsed: %ld", endTime-user_data->startTime);
     	g_printerr("EOF\n");
+    	calWPM(endTime-user_data->startTime);
     	fclose(user_data->filePath);
     	exit(0);
     }
+}
+
+void calWPM(long int timeElapsed){
+	char msg[128];
+	sprintf(msg, "Your WPM is %.2f.\nYour accuracy is %.2f percent.", (word+1)/(timeElapsed/60.0), ((correct-incorrect)/(float) correct)*100);
+	GtkWidget *dialog = gtk_message_dialog_new(NULL, 
+												GTK_DIALOG_MODAL,
+												GTK_MESSAGE_INFO,
+												GTK_BUTTONS_OK,
+												msg);
+	gtk_dialog_run(GTK_DIALOG (dialog));
+	gtk_widget_destroy(dialog);
 }
 
 static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_data){
@@ -132,6 +153,9 @@ static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_da
 			d->typedStr[d->curStrIndex] = key;
 			d->typedStr[d->curStrIndex + 1] = '\0';
 			gtk_label_set_text(GTK_LABEL (d->label), d->typedStr);
+			
+			if (key == ' ')
+				word++;
 
 			if(d->curStrIndex < d->strLen - 1)
 				d->curStrIndex = d->curStrIndex + 1;
