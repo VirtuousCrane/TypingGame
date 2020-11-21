@@ -27,6 +27,7 @@ void correctIncrease(GtkWidget *wid, gpointer ptr);
 void incorrectIncrease(GtkWidget *wid, gpointer ptr);
 void read_words (STR_OPS *user_data);
 void calWPM(long int timeElapsed);
+void calWpmAndExit(GtkWidget *wid, GdkEventKey *event, STR_OPS *user_data);
 static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_data);
 
 
@@ -38,16 +39,17 @@ int main(int argc, char *argv[]){
 	data.curStrIndex = 0;
 	data.filePath = fp;
 	data.startTime = time(0);
-	
+
 	gtk_init(&argc, &argv);
-	
+
 	GtkWidget *win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	GtkWidget *tbl = gtk_table_new(3, 5, TRUE);
 	GtkWidget *text = gtk_label_new(data.str);
 	GtkWidget *typed = gtk_label_new(" ");
+	GtkWidget *btn = gtk_button_new_with_label("Yametekudastop");
 	GtkWidget *correct = gtk_label_new("Correct: 0");
 	GtkWidget *wrong = gtk_label_new("Incorrect: 0");
-	
+
 	data.text = text;
 	data.label = typed;
 	data.correctLabel = correct;
@@ -55,21 +57,25 @@ int main(int argc, char *argv[]){
 
 	read_words(&data);
 	data.strLen = strlen(data.str);
-	
+
+	gtk_window_set_title(GTK_WINDOW (win), "Typing Game");
+	gtk_window_set_default_size(GTK_WINDOW (win), 1100, 100);
 	gtk_container_set_border_width(GTK_CONTAINER (tbl), 10);
 	gtk_table_set_col_spacing(GTK_TABLE (tbl), 2, 5);
-	
+
+	g_signal_connect(btn, "button_release_event", G_CALLBACK(calWpmAndExit), &data);
 	g_signal_connect(win, "delete_event", G_CALLBACK(end_program), NULL);
 	g_signal_connect(win, "key-press-event", G_CALLBACK(keyCallback), &data);
-	
+
 	gtk_table_attach_defaults(GTK_TABLE (tbl), text, 0, 4, 0, 1); // Row 0 Space 0-1
 	gtk_table_attach_defaults(GTK_TABLE (tbl), typed, 0, 4, 2, 3); // Row 2 Space 0-1
 	gtk_table_attach_defaults(GTK_TABLE (tbl), correct, 4, 5, 0, 1); // Row 0 Space 2
 	gtk_table_attach_defaults(GTK_TABLE (tbl), wrong, 4, 5, 1, 2); // Row 1 Space 2
+	gtk_table_attach_defaults(GTK_TABLE (tbl), btn, 4, 5, 2, 3);
 
-	
+
 	gtk_container_add(GTK_CONTAINER (win), tbl);
-	
+
 	gtk_widget_show_all(win);
 	gtk_main();
 	return 0;
@@ -96,28 +102,51 @@ void incorrectIncrease(GtkWidget *wid, gpointer ptr){
 
 void read_words (STR_OPS *user_data) {
     char buffer[128];
+    char tBuffer[128];
     int i = 127;
     int bufferLen;
     g_printerr("===\n%d words\n===\n", word);
 
     if (fgets(buffer, 127, user_data->filePath) != NULL) {
         bufferLen = strlen(buffer);
+
         g_printerr("Buffer Len: %d\n", bufferLen);
-		
 		g_printerr("Last Char: %c\n", buffer[bufferLen-1]);
-    	if(isspace(buffer[bufferLen-1])){
+
+		if((strlen(buffer) == 1 || strlen(buffer) == 2) &&
+			(buffer[0] <= 31 || buffer[1] >= 127))
+			read_words(user_data);
+    	else if(isspace(buffer[bufferLen-1])){
     		g_printerr("IsSpace\n");
     		buffer[bufferLen-1] = '\0';
+    		for(int k=bufferLen; k>-1; k--){
+    			if(isspace(buffer[k]))
+    				buffer[k] = '\0';
+    			else
+    				break;
+    		}
     		user_data->strLen = strlen(buffer);
+
+    		g_printerr("Sentence: %s\n", buffer);
+			g_printerr("First char: %c %d\n", buffer[0], buffer[0]);
+
+		    strcpy(user_data->str, buffer);
+		    user_data->str[user_data->strLen]='\0';
+		    gtk_label_set_text(GTK_LABEL (user_data->text), buffer);
     	}else{
     		user_data->strLen = strlen(buffer);
-    	}
 
-        strcpy(user_data->str, buffer);
-        user_data->str[user_data->strLen]='\0';
-        gtk_label_set_text(GTK_LABEL (user_data->text), buffer);
+    		g_printerr("Sentence: %s\n", buffer);
+			g_printerr("First char: %c %d\n", buffer[0], buffer[0]);
+
+		    strcpy(user_data->str, buffer);
+		    user_data->str[user_data->strLen]='\0';
+		    gtk_label_set_text(GTK_LABEL (user_data->text), buffer);
+    	}
     }else{
     	time_t endTime = time(0);
+		g_printerr("%ld\n", endTime);
+		g_printerr("%ld\n", user_data->startTime);
     	g_printerr("Elapsed: %ld", endTime-user_data->startTime);
     	g_printerr("EOF\n");
     	calWPM(endTime-user_data->startTime);
@@ -126,10 +155,17 @@ void read_words (STR_OPS *user_data) {
     }
 }
 
+void calWpmAndExit(GtkWidget *wid, GdkEventKey *event, STR_OPS *user_data){
+	time_t endTime = time(0);
+	calWPM(endTime - user_data->startTime);
+	fclose(user_data->filePath);
+	exit(0);
+}
+
 void calWPM(long int timeElapsed){
 	char msg[128];
 	sprintf(msg, "Your WPM is %.2f.\nYour accuracy is %.2f percent.", (word+1)/(timeElapsed/60.0), ((correct-incorrect)/(float) correct)*100);
-	GtkWidget *dialog = gtk_message_dialog_new(NULL, 
+	GtkWidget *dialog = gtk_message_dialog_new(NULL,
 												GTK_DIALOG_MODAL,
 												GTK_MESSAGE_INFO,
 												GTK_BUTTONS_OK,
@@ -146,14 +182,24 @@ static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_da
 	sprintf(temp, "%c", key);
 	if(key > 31 && key < 127){
 		g_printerr("%c %d\n", key, key);
-		
-		if(d->str[d->curStrIndex] == key){
+
+		if(d->str[d->curStrIndex] <= 31 || d->str[d->curStrIndex] >= 127){
+			if(d->curStrIndex + 1 < d->curStrIndex -1)
+				d->curStrIndex++;
+			else{
+				d->curStrIndex = 0;
+				d->typedStr[d->curStrIndex] = '\0';
+				gtk_label_set_text(GTK_LABEL (d->label), d->typedStr);
+				read_words(user_data);
+			}
+		}
+		else if(d->str[d->curStrIndex] == key){
 			g_printerr("Correct\n");
 			correctIncrease(wid, d->correctLabel);
 			d->typedStr[d->curStrIndex] = key;
 			d->typedStr[d->curStrIndex + 1] = '\0';
 			gtk_label_set_text(GTK_LABEL (d->label), d->typedStr);
-			
+
 			if (key == ' ')
 				word++;
 
