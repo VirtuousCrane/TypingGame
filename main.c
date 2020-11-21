@@ -2,7 +2,7 @@
 # include <string.h>
 # include <ctype.h>
 # include <time.h>
-# include <gtk-2.0/gtk/gtk.h>
+# include <gtk-3.0/gtk/gtk.h>
 
 int correct = 0;
 int incorrect = 0;
@@ -33,6 +33,7 @@ static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_da
 
 int main(int argc, char *argv[]){
 	FILE *fp;
+	const gchar *cssPath = "./styles.css";
 	fp = fopen("./exampleText.txt", "rb");
 
 	struct STR_OPS data;
@@ -43,7 +44,34 @@ int main(int argc, char *argv[]){
 	gtk_init(&argc, &argv);
 
 	GtkWidget *win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	GtkWidget *tbl = gtk_table_new(3, 5, TRUE);
+	GtkCssProvider *cssProvider = gtk_css_provider_new();
+	GFile *cssFile = g_file_new_for_path(cssPath);
+	GError *error = NULL;
+	gtk_css_provider_load_from_file(cssProvider, cssFile, &error);
+	if(error){
+		g_warning("%s", error->message);
+		g_clear_error(&error);
+	}
+	g_object_unref (cssFile);
+
+	/*
+	GtkCssProvider *cssProvider = gtk_css_provider_new();
+	gtk_css_provider_load_from_path(cssProvider, "./styles.css", NULL);
+
+	GtkStyleContext *context;
+    context = gtk_widget_get_style_context(win);
+	gtk_style_context_add_provider (context,
+	                                GTK_STYLE_PROVIDER(cssProvider),
+	                                GTK_STYLE_PROVIDER_PRIORITY_USER);
+	*/
+
+
+	GtkWidget *tbl = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+	GtkWidget *tbl_1 = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+	GtkWidget *tbl_2 = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+	GtkWidget *tbl_3 = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+	GtkWidget *tbl_4 = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+
 	GtkWidget *text = gtk_label_new(data.str);
 	GtkWidget *typed = gtk_label_new(" ");
 	GtkWidget *btn = gtk_button_new_with_label("Yametekudastop");
@@ -61,17 +89,25 @@ int main(int argc, char *argv[]){
 	gtk_window_set_title(GTK_WINDOW (win), "Typing Game");
 	gtk_window_set_default_size(GTK_WINDOW (win), 1100, 100);
 	gtk_container_set_border_width(GTK_CONTAINER (tbl), 10);
-	gtk_table_set_col_spacing(GTK_TABLE (tbl), 2, 5);
 
 	g_signal_connect(btn, "button_release_event", G_CALLBACK(calWpmAndExit), &data);
 	g_signal_connect(win, "delete_event", G_CALLBACK(end_program), NULL);
 	g_signal_connect(win, "key-press-event", G_CALLBACK(keyCallback), &data);
 
-	gtk_table_attach_defaults(GTK_TABLE (tbl), text, 0, 4, 0, 1); // Row 0 Space 0-1
-	gtk_table_attach_defaults(GTK_TABLE (tbl), typed, 0, 4, 2, 3); // Row 2 Space 0-1
-	gtk_table_attach_defaults(GTK_TABLE (tbl), correct, 4, 5, 0, 1); // Row 0 Space 2
-	gtk_table_attach_defaults(GTK_TABLE (tbl), wrong, 4, 5, 1, 2); // Row 1 Space 2
-	gtk_table_attach_defaults(GTK_TABLE (tbl), btn, 4, 5, 2, 3);
+	gtk_widget_set_name(text, "exampleText");
+	gtk_widget_set_name(typed, "typedText");
+
+	gtk_box_pack_start(GTK_BOX (tbl), tbl_1, TRUE, TRUE, 10);
+	gtk_box_pack_start(GTK_BOX (tbl), tbl_2, TRUE, TRUE, 10);
+	gtk_box_pack_start(GTK_BOX (tbl), tbl_3, TRUE, TRUE, 10);
+	gtk_box_pack_start(GTK_BOX (tbl), tbl_4, TRUE, TRUE, 10);
+
+	gtk_box_pack_start(GTK_BOX (tbl_1), text, TRUE, TRUE, 10);
+	gtk_box_pack_start(GTK_BOX (tbl_2), typed, TRUE, TRUE, 10);
+	gtk_box_pack_end(GTK_BOX (tbl_3), correct, TRUE, TRUE, 10);
+	gtk_box_pack_end(GTK_BOX (tbl_3), wrong, TRUE, TRUE, 10);
+	gtk_box_pack_end(GTK_BOX (tbl_4), btn, TRUE, TRUE, 10);
+
 
 
 	gtk_container_add(GTK_CONTAINER (win), tbl);
@@ -105,19 +141,14 @@ void read_words (STR_OPS *user_data) {
     char tBuffer[128];
     int i = 127;
     int bufferLen;
-    g_printerr("===\n%d words\n===\n", word);
 
     if (fgets(buffer, 127, user_data->filePath) != NULL) {
         bufferLen = strlen(buffer);
-
-        g_printerr("Buffer Len: %d\n", bufferLen);
-		g_printerr("Last Char: %c\n", buffer[bufferLen-1]);
 
 		if((strlen(buffer) == 1 || strlen(buffer) == 2) &&
 			(buffer[0] <= 31 || buffer[1] >= 127))
 			read_words(user_data);
     	else if(isspace(buffer[bufferLen-1])){
-    		g_printerr("IsSpace\n");
     		buffer[bufferLen-1] = '\0';
     		for(int k=bufferLen; k>-1; k--){
     			if(isspace(buffer[k]))
@@ -127,17 +158,11 @@ void read_words (STR_OPS *user_data) {
     		}
     		user_data->strLen = strlen(buffer);
 
-    		g_printerr("Sentence: %s\n", buffer);
-			g_printerr("First char: %c %d\n", buffer[0], buffer[0]);
-
 		    strcpy(user_data->str, buffer);
 		    user_data->str[user_data->strLen]='\0';
 		    gtk_label_set_text(GTK_LABEL (user_data->text), buffer);
     	}else{
     		user_data->strLen = strlen(buffer);
-
-    		g_printerr("Sentence: %s\n", buffer);
-			g_printerr("First char: %c %d\n", buffer[0], buffer[0]);
 
 		    strcpy(user_data->str, buffer);
 		    user_data->str[user_data->strLen]='\0';
@@ -145,9 +170,6 @@ void read_words (STR_OPS *user_data) {
     	}
     }else{
     	time_t endTime = time(0);
-		g_printerr("%ld\n", endTime);
-		g_printerr("%ld\n", user_data->startTime);
-    	g_printerr("Elapsed: %ld", endTime-user_data->startTime);
     	g_printerr("EOF\n");
     	calWPM(endTime-user_data->startTime);
     	fclose(user_data->filePath);
@@ -181,7 +203,6 @@ static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_da
 
 	sprintf(temp, "%c", key);
 	if(key > 31 && key < 127){
-		g_printerr("%c %d\n", key, key);
 
 		if(d->str[d->curStrIndex] <= 31 || d->str[d->curStrIndex] >= 127){
 			if(d->curStrIndex + 1 < d->curStrIndex -1)
@@ -194,7 +215,6 @@ static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_da
 			}
 		}
 		else if(d->str[d->curStrIndex] == key){
-			g_printerr("Correct\n");
 			correctIncrease(wid, d->correctLabel);
 			d->typedStr[d->curStrIndex] = key;
 			d->typedStr[d->curStrIndex + 1] = '\0';
