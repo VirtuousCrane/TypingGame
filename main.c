@@ -26,14 +26,15 @@ typedef struct STR_OPS{
 	gpointer win;
 }STR_OPS;
 
-void end_program(GtkWidget *wid, gpointer ptr);
+void end_program(GtkWidget *wid, gpointer ptr, STR_OPS *user_data);
 void correctIncrease(GtkWidget *wid, gpointer ptr);
 void incorrectIncrease(GtkWidget *wid, gpointer ptr);
 void browseFile(GtkWidget *wid, GdkEventKey *event, STR_OPS *user_data);
 void read_words (STR_OPS *user_data);
 void calWPM(long int timeElapsed);
-void calWpmAndExit(GtkWidget *wid, GdkEventKey *event, STR_OPS *user_data);
+void calWpmAndReset(GtkWidget *wid, GdkEventKey *event, STR_OPS *user_data);
 void reset(STR_OPS *user_data, char fileName[]);
+void resetCallback(GtkWidget *wid, GdkEventKey *event, STR_OPS *user_data);
 static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_data);
 static void load_css();
 
@@ -59,7 +60,8 @@ int main(int argc, char *argv[]){
 	GtkWidget *btn = gtk_button_new_with_label("Yametekudastop");
 	GtkWidget *correct = gtk_label_new("Correct: 0");
 	GtkWidget *wrong = gtk_label_new("Incorrect: 0");
-	GtkWidget *fileChooser = gtk_button_new_with_label("Burowsu");
+	GtkWidget *fileChooser = gtk_button_new_with_label("Browse");
+	GtkWidget *resetBtn = gtk_button_new_with_label("Reset");
 
 	data.text = text;
 	data.label = typed;
@@ -77,9 +79,10 @@ int main(int argc, char *argv[]){
 	gtk_window_set_default_size(GTK_WINDOW (win), 1200, 100);
 	gtk_container_set_border_width(GTK_CONTAINER (tbl), 10);
 
-	g_signal_connect(btn, "button_release_event", G_CALLBACK(calWpmAndExit), &data);
+	g_signal_connect(btn, "button_release_event", G_CALLBACK(calWpmAndReset), &data);
 	g_signal_connect(fileChooser, "button_release_event", G_CALLBACK(browseFile), &data);
-	g_signal_connect(win, "delete_event", G_CALLBACK(end_program), NULL);
+	g_signal_connect(resetBtn, "button_release_event", G_CALLBACK(resetCallback), &data);
+	g_signal_connect(win, "delete_event", G_CALLBACK(end_program), &data);
 	g_signal_connect(win, "key-press-event", G_CALLBACK(keyCallback), &data);
 
 	gtk_widget_set_name(text, "exampleText");
@@ -96,7 +99,8 @@ int main(int argc, char *argv[]){
 	gtk_box_pack_end(GTK_BOX (tbl_3), correct, TRUE, TRUE, 10);
 	gtk_box_pack_end(GTK_BOX (tbl_3), wrong, TRUE, TRUE, 10);
 	gtk_box_pack_start(GTK_BOX (tbl_4), fileChooser, TRUE, TRUE, 10);
-	gtk_box_pack_end(GTK_BOX (tbl_4), btn, TRUE, TRUE, 10);
+	gtk_box_pack_start(GTK_BOX (tbl_4), btn, TRUE, TRUE, 10);
+	gtk_box_pack_start(GTK_BOX (tbl_4), resetBtn, TRUE, TRUE, 10);
 
 	gtk_container_add(GTK_CONTAINER (win), tbl);
 
@@ -106,7 +110,8 @@ int main(int argc, char *argv[]){
 }
 
 
-void end_program(GtkWidget *wid, gpointer ptr){
+void end_program(GtkWidget *wid, gpointer ptr, STR_OPS *user_data){
+	fclose(user_data->filePath);
 	gtk_main_quit();
 }
 
@@ -200,11 +205,10 @@ void read_words (STR_OPS *user_data) {
     }
 }
 
-void calWpmAndExit(GtkWidget *wid, GdkEventKey *event, STR_OPS *user_data){
+void calWpmAndReset(GtkWidget *wid, GdkEventKey *event, STR_OPS *user_data){
 	time_t endTime = time(0);
 	calWPM(endTime - user_data->startTime);
-	fclose(user_data->filePath);
-	exit(0);
+	reset(user_data, NULL);
 }
 
 void calWPM(long int timeElapsed){
@@ -281,13 +285,20 @@ static void load_css(){
 }
 
 void reset(STR_OPS *user_data, char fileName[]){
-	fclose(user_data->filePath);
-	FILE *fp;
-	fp = fopen(fileName, "rb");
-
-	user_data->filePath = fp;
+	if(fileName != NULL){
+		fclose(user_data->filePath);
+		FILE *fp;
+		fp = fopen(fileName, "rb");
+		user_data->filePath = fp;
+	}else{
+		fseek(user_data->filePath, 0, SEEK_SET);
+	}
 	correct = 0;
 	incorrect = 0;
+	word = 0;
+
+	gtk_label_set_text(GTK_LABEL (user_data->correctLabel), "Correct: 0");
+	gtk_label_set_text(GTK_LABEL (user_data->incorrectLabel), "Incorrect: 0");
 	user_data->curStrIndex = 0;
 	user_data->startTime  = time(0);
 	strcpy(user_data->typedStr, "");
@@ -295,4 +306,8 @@ void reset(STR_OPS *user_data, char fileName[]){
 	gtk_label_set_text(GTK_LABEL (user_data->label), user_data->typedStr);
 
 	read_words(user_data);
+}
+
+void resetCallback(GtkWidget *wid, GdkEventKey *event, STR_OPS *user_data){
+	reset(user_data, NULL);
 }
