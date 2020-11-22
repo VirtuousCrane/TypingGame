@@ -4,20 +4,28 @@ label#exampleText {
 }
 
 label#typedText {
-    font: 12px "Comic Sans";
+    font: 15px "Comic Sans";
     font-weight: normal;
 }
 
+/*
 button {
 	margin: 10px;
 	padding: 0px 45px;
-	background: #73C6B6;
+	background: #f1c40f;
 	transition: 0.5s;
 	background-size: 200% auto;
 	color: black;
 	border-radius: 4px;
 }
+*/
 
-box {
-	background-color: #F0B27A;
+/*
+box, window {
+	background-color: #2ecc71;
 }
+
+box#typeBox {
+    background-color: #FFFFFF;
+}
+*/
