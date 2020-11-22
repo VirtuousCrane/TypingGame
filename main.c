@@ -200,8 +200,7 @@ void read_words (STR_OPS *user_data) {
     	time_t endTime = time(0);
     	g_printerr("EOF\n");
     	calWPM(endTime-user_data->startTime);
-    	fclose(user_data->filePath);
-    	exit(0);
+    	reset(user_data, NULL);
     }
 }
 
