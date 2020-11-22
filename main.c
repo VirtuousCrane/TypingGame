@@ -158,9 +158,18 @@ void read_words (STR_OPS *user_data) {
     if (fgets(buffer, 127, user_data->filePath) != NULL) {
         bufferLen = strlen(buffer);
 
-		if(bufferLen == 0 ||(bufferLen == 1 && (buffer[0] <= 31 || buffer[0] >= 127))){
-			read_words(user_data);
-		}else if(isspace(buffer[bufferLen-1])){
+		if(bufferLen == 0 || bufferLen == 1){
+			if(fgets(buffer, 127, user_data->filePath) != NULL){
+				bufferLen = strlen(buffer);
+			}else{
+				time_t endTime = time(0);
+		    	calWPM(endTime-user_data->startTime);
+		    	reset(user_data, NULL);
+				return ;
+			}
+		}
+
+		if(isspace(buffer[bufferLen-1])){
     		buffer[bufferLen-1] = '\0';
     		for(int k=bufferLen; k>-1; k--){
     			if(isspace(buffer[k]))
@@ -198,7 +207,6 @@ void read_words (STR_OPS *user_data) {
     	}
     }else{
     	time_t endTime = time(0);
-    	g_printerr("EOF\n");
     	calWPM(endTime-user_data->startTime);
     	reset(user_data, NULL);
     }
@@ -228,9 +236,9 @@ static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_da
 	char temp[2];
 
 	sprintf(temp, "%c", key);
-	if(key > 31 && key < 127){
+	if((key > 31 && key < 127) || key == 9){
 
-		if(d->str[d->curStrIndex] <= 31 || d->str[d->curStrIndex] >= 127){
+		if((d->str[d->curStrIndex] <= 31 || d->str[d->curStrIndex] >= 127) && d->str[d->curStrIndex] != '\t'){
 			if(d->curStrIndex + 1 < d->curStrIndex -1)
 				d->curStrIndex++;
 			else{
@@ -240,7 +248,7 @@ static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_da
 				read_words(user_data);
 			}
 		}
-		else if(d->str[d->curStrIndex] == key){
+		else if(d->str[d->curStrIndex] == key || (d->str[d->curStrIndex] == '\t' && key == 9)){
 			correctIncrease(wid, d->correctLabel);
 			d->typedStr[d->curStrIndex] = key;
 			d->typedStr[d->curStrIndex + 1] = '\0';
