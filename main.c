@@ -158,7 +158,7 @@ void read_words (STR_OPS *user_data) {
     if (fgets(buffer, 127, user_data->filePath) != NULL) {
         bufferLen = strlen(buffer);
 
-		if(bufferLen == 0 || bufferLen == 1){
+		if(bufferLen == 0 || bufferLen == 1 || (bufferLen == 2 && buffer[0] == ' ')){
 			if(fgets(buffer, 127, user_data->filePath) != NULL){
 				bufferLen = strlen(buffer);
 			}else{
