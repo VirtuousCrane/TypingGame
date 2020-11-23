@@ -11,6 +11,7 @@ gcc main.c -o main $(pkg-config --cflags --libs gtk+-3.0)
 int correct = 0;
 int incorrect = 0;
 int word = 0;
+time_t initialTime;
 
 typedef struct STR_OPS{
 	int strLen;
@@ -70,12 +71,13 @@ int main(int argc, char *argv[]){
 	data.curStrIndex = 0;
 	data.filePath = fp;
 	data.startTime = time(0);
+	initialTime = data.startTime;
 	data.win = win;
 
 	read_words(&data);
 	data.strLen = strlen(data.str);
 
-	gtk_window_set_title(GTK_WINDOW (win), "Typing Game");
+	gtk_window_set_title(GTK_WINDOW (win), "Genesis Typer");
 	gtk_window_set_default_size(GTK_WINDOW (win), 1200, 100);
 	gtk_container_set_border_width(GTK_CONTAINER (tbl), 10);
 
@@ -158,12 +160,12 @@ void read_words (STR_OPS *user_data) {
     if (fgets(buffer, 127, user_data->filePath) != NULL) {
         bufferLen = strlen(buffer);
 
-		if(bufferLen == 0 || bufferLen == 1 || (bufferLen == 2 && buffer[0] == ' ')){
+		if(bufferLen == 0 || bufferLen == 1 || (bufferLen == 2 && isspace(buffer[0]))){
 			if(fgets(buffer, 127, user_data->filePath) != NULL){
 				bufferLen = strlen(buffer);
 			}else{
 				time_t endTime = time(0);
-		    	calWPM(endTime-user_data->startTime);
+		    	calWPM(endTime-initialTime);
 		    	reset(user_data, NULL);
 				return ;
 			}
@@ -206,15 +208,18 @@ void read_words (STR_OPS *user_data) {
 		    gtk_label_set_text(GTK_LABEL (user_data->text), buffer);
     	}
     }else{
+		/*
     	time_t endTime = time(0);
-    	calWPM(endTime-user_data->startTime);
+    	calWPM(endTime-initialTime);
     	reset(user_data, NULL);
+		*/
+		calWpmAndReset(user_data->win, NULL, user_data);
     }
 }
 
 void calWpmAndReset(GtkWidget *wid, GdkEventKey *event, STR_OPS *user_data){
 	time_t endTime = time(0);
-	calWPM(endTime - user_data->startTime);
+	calWPM(endTime - initialTime);
 	reset(user_data, NULL);
 }
 
@@ -239,9 +244,9 @@ static gboolean keyCallback(GtkWidget *wid, GdkEventKey *event, gpointer user_da
 	if((key > 31 && key < 127) || key == 9){
 
 		if((d->str[d->curStrIndex] <= 31 || d->str[d->curStrIndex] >= 127) && d->str[d->curStrIndex] != '\t'){
-			if(d->curStrIndex + 1 < d->curStrIndex -1)
+			if(d->curStrIndex + 1 < d->curStrIndex -1){
 				d->curStrIndex++;
-			else{
+			}else{
 				d->curStrIndex = 0;
 				d->typedStr[d->curStrIndex] = '\0';
 				gtk_label_set_text(GTK_LABEL (d->label), d->typedStr);
@@ -307,7 +312,7 @@ void reset(STR_OPS *user_data, char fileName[]){
 	gtk_label_set_text(GTK_LABEL (user_data->correctLabel), "Correct: 0");
 	gtk_label_set_text(GTK_LABEL (user_data->incorrectLabel), "Incorrect: 0");
 	user_data->curStrIndex = 0;
-	user_data->startTime  = time(0);
+	initialTime  = time(0);
 	strcpy(user_data->typedStr, "");
 
 	gtk_label_set_text(GTK_LABEL (user_data->label), user_data->typedStr);
